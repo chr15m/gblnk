@@ -1,34 +1,21 @@
 Hey there!
 
-My friend had a spare gameboy camera and a link cable from the MadCatz company. I couldn't beleive
-that nobody had written transfer software for linux. So i wrote one. Here it is. Now I can take
-crusty, 4 color greyscale, hax0r pictures and download them onto my computer. I still haven't got
-the decompression routines completely down pat (you can see some random noise artifacts and
-distortions where pixels are obviously not meant to be where they are found). Please tell me if you
-know the CORRECT method of encoding found in the gb printer (which the madcatz cable emulates).
+Firstly, this program depends on the allegro library.
+http://alleg.sourceforge.net/
 
-Lemme know what you think.
+It was compile with the 4.0 version on my machine.
+
+My friend had a spare gameboy camera and a link cable from the MadCatz company. I couldn't beleive that nobody had
+written transfer software for linux. So i wrote some. Here it is. Now I can take crusty, 4 color greyscale, hax0r
+pictures and download them onto my computer. Thanks very much to Martin Eyre for telling me the correct algorithm with
+which the tiles are encoded. Now the pictures come out exactly as they're shown on the gameboy screen.
+
+The files madcatz.c & madcatz.txt were written by someone else. i included them as credit. I found them here:
+http://www.geocities.com/grinara/
+There is no indication of the name of the person who wrote these. They appear to be for a dos compiler.
+
+Lemme know what you think of gblnk!
 	
 Chris.
 
 (chris@mccormick.cx)
-
-PS to use:
-
-./gblnk test.bmp
-
-The program will load.
-
-Press 'print' on the gameboy
-
-The program will show a '|' style spinning thing
-
-When it's done the picture will appear.
-
-'A' makes it small
-'D' makes it big
-'S' saves it as filename specified on the command line
-
-'Esc' exits at any time.
-
-the files madcatz.c & madcatz.txt were written by someone else. i included them as credit.

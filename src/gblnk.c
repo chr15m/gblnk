@@ -5,30 +5,10 @@
 #include <allegro.h>
 
 /* 
-
-    gblnk - for transferring images between your gameboy camera and your PC
-    Copyright (C) 2002 Chris McCormick
-
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program; if not, write to the Free Software
-    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-
 to do:
 
 a) get more sleep
 b) put in a 'batch mode' transfer for multiple prints
-c) Figure out what the REAL compression algorithm is
-
 */
 
 /* Set up our parallel port address */
@@ -127,7 +107,7 @@ int main(int argc, char **argv)
 
 		/* get the time right now */
 		zerowait = time(NULL);
-		while ((inb(STATUS) & 0x20) == 0)
+		while (((inb(STATUS) & 0x20) == 0) | (key[KEY_ESC]))
 			{ 
 			/* make sure this doesn't ever take longer than 5 seconds */
 			if ((time(NULL) - zerowait) > 5)
@@ -142,7 +122,7 @@ int main(int argc, char **argv)
 		
 		/*printf("%x\n",inbyte);*/
 		/* check for a timeout */
-		if ((time(NULL) - datastartwait) > 10)
+		if (((time(NULL) - datastartwait) > 10) | (key[KEY_ESC]))
 			{
 			/* lose permission to parallel port */
 			ioperm(lptbase, 3, 0);
@@ -157,6 +137,8 @@ int main(int argc, char **argv)
 		{
 		if (key[KEY_ESC])
 			{
+			/* lose permission to parallel port */
+			ioperm(lptbase, 3, 0);
 			printf("User exit\n");
 			return 1;
 			}
@@ -167,8 +149,10 @@ int main(int argc, char **argv)
 	textprintf(screen, font, 10, 10, makecol(255, 255, 255), "Awaiting data transfer:");
 	textprintf(screen, font, 10, 20, makecol(255, 255, 255), "(Escape to cancel)");
 
+	/* set the timeout start */
 	datastartwait = time(NULL) + 60;
 	do 	{
+		/* do a variety of tests on the status */
 		outb(0x26, CONTROL);
 		while (((inb(STATUS) & 0x20) == 0) && (!key[KEY_ESC]) && ((time(NULL) - datastartwait) < TIMEOUT));
 		inbyte = inw(DATA) & 0xF;
@@ -212,10 +196,16 @@ int main(int argc, char **argv)
 				c=c+6;
 				/* set the start point for this chunk of data */
 				start = c;
-				}			
+				}
+/*			printf("\n\n"); */
 			}
 		else
 			{
+/*			printf("%x ", buffer[c]); */
+			
+			/* go two bytes at a time down the page for 16 byte chunks. */
+			/* go across the page until we get 320 'tiles' of two by eight */
+			/* go down the page */
 			if (((c-start) % 320) == 0)
 				{
 				row++;
@@ -233,26 +223,30 @@ int main(int argc, char **argv)
 				}
 			x=(c-start)%2;
 
+			/* draw in blocks of two (ignore second byte */
 			if (x==0)
 				{
-				putpixel(tmpbmp, (x + col*2)*4 + 7, y + row*8, colmap[buffer[c+1] >> 0 & 0x03]);	
-				putpixel(tmpbmp, (x + col*2)*4 + 6, y + row*8, colmap[buffer[c] >> 0 & 0x03]);	
+				/* decode the tiles */
+				putpixel(tmpbmp, (x + col*2)*4 + 0, y + row*8, colmap[((buffer[c+1] & 0x80) >> 6) + ((buffer[c] & 0x80) >> 7)]);
+				putpixel(tmpbmp, (x + col*2)*4 + 1, y + row*8, colmap[((buffer[c+1] & 0x40) >> 5) + ((buffer[c] & 0x40) >> 6)]);
+				putpixel(tmpbmp, (x + col*2)*4 + 2, y + row*8, colmap[((buffer[c+1] & 0x20) >> 4) + ((buffer[c] & 0x20) >> 5)]);
+				putpixel(tmpbmp, (x + col*2)*4 + 3, y + row*8, colmap[((buffer[c+1] & 0x10) >> 3) + ((buffer[c] & 0x10) >> 4)]);
 
-				putpixel(tmpbmp, (x + col*2)*4 + 5, y + row*8, colmap[buffer[c+1] >> 2 & 0x03]);	
-				putpixel(tmpbmp, (x + col*2)*4 + 4, y + row*8, colmap[buffer[c] >> 2 & 0x03]);	
-
-				putpixel(tmpbmp, (x + col*2)*4 + 3, y + row*8, colmap[buffer[c+1] >> 4 & 0x03]);	
-				putpixel(tmpbmp, (x + col*2)*4 + 2, y + row*8, colmap[buffer[c] >> 4 & 0x03]);	
-				
-				putpixel(tmpbmp, (x + col*2)*4 + 1, y + row*8, colmap[buffer[c+1] >> 6 & 0x03]);	
-				putpixel(tmpbmp, (x + col*2)*4 + 0, y + row*8, colmap[buffer[c] >> 6 & 0x03]);	
+				putpixel(tmpbmp, (x + col*2)*4 + 4, y + row*8, colmap[((buffer[c+1] & 0x08) >> 2) + ((buffer[c] & 0x08) >> 3)]);
+				putpixel(tmpbmp, (x + col*2)*4 + 5, y + row*8, colmap[((buffer[c+1] & 0x04) >> 1) + ((buffer[c] & 0x04) >> 2)]);
+				putpixel(tmpbmp, (x + col*2)*4 + 6, y + row*8, colmap[((buffer[c+1] & 0x02) >> 0) + ((buffer[c] & 0x02) >> 1)]);
+				putpixel(tmpbmp, (x + col*2)*4 + 7, y + row*8, colmap[((buffer[c+1] & 0x01) << 1) + ((buffer[c] & 0x01)	>> 0)]);
 				}
 			}
 		}
 
+	/* clear the screen (duh) */
+	clear(screen);
+
 	/* plaster it onto the screen */
 	stretch_blit(tmpbmp, screen, 0, 0, 150, 150, 0, 0, 150, 150);
 
+	/* until they press escape */
 	while(!key[KEY_ESC])
 		{
 		if (key[KEY_D])
